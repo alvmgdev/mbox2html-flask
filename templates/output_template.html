@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>{{ title }}</title>
+</head>
+<body>
+    {% for message in mbox %}
+        <strong>Subject: </strong><label>{{ message.Subject|e }}</label>
+        <br>
+
+        <strong>From: </strong><label>{{ message.From|e }}</label>
+        <br>
+
+        <strong>To: </strong><label>{{ message.To|e }}</label>
+        <br>
+
+        {% if message.cc %}
+            <strong>cc: </strong><label>{{ message.cc|e }}</label>
+            <br>
+        {% endif %}
+
+        <br>
+        {% autoescape false %}
+            {% if message['Content-Type'] and 'html' in message['Content-Type'] %}
+                {{ message.get_payload() }}
+            {% else %}
+                {{ message.get_payload() | replace("\n\r", "<br/>") }}
+            {% endif %}
+        {% endautoescape %}
+        <br>
+
+        <br>
+        <i>All keys to check:</i>
+        <small>
+        {{ message.items()|e }}
+        </small>
+
+        <hr>
+        <br>
+    {% endfor %}
+</body>
+</html>

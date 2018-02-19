@@ -1,0 +1,80 @@
+{% extends "bootstrap/base.html" %}
+{% block title %}Mbox2Html{% endblock %}
+
+{% block navbar %}
+<div class="navbar navbar-fixed-top">
+  <!-- ... -->
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <br>
+        <br>
+        <div class="col-xs-12">
+            {% with messages = get_flashed_messages(category_filter=["success"]) %}
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-success">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            {% with messages = get_flashed_messages(category_filter=["error"]) %}
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-danger">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            <form method="post" enctype="multipart/form-data" action="{{ url_for('upload') }}">
+                <input type="file" name="file">
+                <br>
+                <button class="btn btn-primary" type="submit">Upload</button>
+            </form>
+            <br>
+        </div>
+        <br>
+        <hr>
+        <br>
+        <div class="col-xs-12 col-md-6">
+            <h4>List of uploaded mbox files:</h4>
+            {% if list_of_mbox_files|length > 0 %}
+                <ul>
+                {% for mbox_file in list_of_mbox_files %}
+                    <li>
+                        <a href="{{ url_for('mbox_to_html', filename=mbox_file) }}">
+                            {{ mbox_file }}
+                        </a>
+                    </li>
+                {% endfor %}
+                </ul>
+            {% else %}
+                No mbox files uploaded already.
+            {% endif %}
+        </div>
+        <div class="col-xs-12 col-md-6">
+            <h4>List of generated html files:</h4>
+            {% if list_of_html_files|length > 0 %}
+                <ul>
+                {% for html_file in list_of_html_files %}
+                    <li>
+                        <a href="{{ url_for('download', filename=html_file) }}">
+                            {{ html_file }}
+                        </a>
+                    </li>
+                {% endfor %}
+                </ul>
+            {% else %}
+                No html files generated already.
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% endblock %}
