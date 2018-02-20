@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ title }}</title>
+</head>
+<body>
+    {% with message=message %}
+        {% include "message_template.html" %}
+    {% endwith %}
+</body>
+</html>

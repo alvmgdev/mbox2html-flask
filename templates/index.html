@@ -1,18 +1,13 @@
 {% extends "bootstrap/base.html" %}
 {% block title %}Mbox2Html{% endblock %}
 
-{% block navbar %}
-<div class="navbar navbar-fixed-top">
-  <!-- ... -->
-</div>
-{% endblock %}
-
 {% block content %}
 <div class="container-fluid">
+
+    <div style="margin-bottom: 10em"></div>
+
     <div class="row">
-        <br>
-        <br>
-        <div class="col-xs-12">
+        <div class="col-xs-10 col-xs-offset-1 col-md-6 col-md-offset-3 col-lg-4 col-lg-offset-4">
             {% with messages = get_flashed_messages(category_filter=["success"]) %}
                 {% if messages %}
                     {% for message in messages %}
@@ -32,49 +27,54 @@
                     {% endfor %}
                 {% endif %}
             {% endwith %}
-            <form method="post" enctype="multipart/form-data" action="{{ url_for('upload') }}">
-                <input type="file" name="file">
-                <br>
-                <button class="btn btn-primary" type="submit">Upload</button>
-            </form>
-            <br>
-        </div>
-        <br>
-        <hr>
-        <br>
-        <div class="col-xs-12 col-md-6">
-            <h4>List of uploaded mbox files:</h4>
-            {% if list_of_mbox_files|length > 0 %}
-                <ul>
-                {% for mbox_file in list_of_mbox_files %}
-                    <li>
-                        <a href="{{ url_for('mbox_to_html', filename=mbox_file) }}">
-                            {{ mbox_file }}
-                        </a>
-                    </li>
-                {% endfor %}
-                </ul>
-            {% else %}
-                No mbox files uploaded already.
-            {% endif %}
-        </div>
-        <div class="col-xs-12 col-md-6">
-            <h4>List of generated html files:</h4>
-            {% if list_of_html_files|length > 0 %}
-                <ul>
-                {% for html_file in list_of_html_files %}
-                    <li>
-                        <a href="{{ url_for('download', filename=html_file) }}">
-                            {{ html_file }}
-                        </a>
-                    </li>
-                {% endfor %}
-                </ul>
-            {% else %}
-                No html files generated already.
-            {% endif %}
         </div>
     </div>
+
+    <div class="row">
+        <div class="col-xs-10 col-xs-offset-1 col-md-6 col-md-offset-3 col-lg-4 col-lg-offset-4">
+            <form method="post" enctype="multipart/form-data" action="{{ url_for('upload') }}">
+                <input type="file" name="file" id="input_real_file" accept=".mbox" style="visibility:hidden"/>
+                <div class="input-group">
+                    <input type="text" id="input_file" class="form-control" placeholder="Upload..." readonly/>
+                    <span class="input-group-btn">
+                        <button class="btn btn-default" type="submit">Upload</button>
+                    </span>
+                </div>
+            </form>
+            <br>
+            <hr>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-xs-10 col-xs-offset-1 col-md-6 col-md-offset-3 col-lg-4 col-lg-offset-4">
+            <form action="{{ url_for('convert') }}" method="post">
+                <div class="checkbox">
+                    <label>
+                        <input type="checkbox" autocomplete="off" name="process_msgs_as_separated_files"/>
+                        Convert each email individually
+                    </label>
+                </div>
+                <button class="btn btn-default" type="submit">
+                Convert
+                </button>
+            </form>
+        </div>
+    </div>
+
 </div>
 
+<script>
+    var input_file = document.getElementById('input_file');
+    var input_real_file = document.getElementById('input_real_file');
+
+    input_real_file.onchange = function(e) {
+        var file_name = this.value.replace('C:\\fakepath\\', '');
+        input_file.value = file_name;
+    }
+
+    input_file.onclick = function() {
+        input_real_file.click();
+    };
+
+</script>
 {% endblock %}

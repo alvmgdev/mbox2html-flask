@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -8,37 +8,10 @@
     <title>{{ title }}</title>
 </head>
 <body>
-    {% for message in mbox %}
-        <strong>Subject: </strong><label>{{ message.Subject|e }}</label>
-        <br>
-
-        <strong>From: </strong><label>{{ message.From|e }}</label>
-        <br>
-
-        <strong>To: </strong><label>{{ message.To|e }}</label>
-        <br>
-
-        {% if message.cc %}
-            <strong>cc: </strong><label>{{ message.cc|e }}</label>
-            <br>
-        {% endif %}
-
-        <br>
-        {% autoescape false %}
-            {% if message['Content-Type'] and 'html' in message['Content-Type'] %}
-                {{ message.get_payload() }}
-            {% else %}
-                {{ message.get_payload() | replace("\n\r", "<br/>") }}
-            {% endif %}
-        {% endautoescape %}
-        <br>
-
-        <br>
-        <i>All keys to check:</i>
-        <small>
-        {{ message.items()|e }}
-        </small>
-
+    {% for msg in mbox %}
+        {% with message=msg %}
+            {% include "message_template.html" %}
+        {% endwith %}
         <hr>
         <br>
     {% endfor %}

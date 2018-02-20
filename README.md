@@ -18,7 +18,7 @@ pip3 install -r requirements.txt
 ## Steps to convert a mbox file to html file
 * Select file
 * Upload
-* Click on uploaded file
-* Click on generated file
+* Click on Convert (you can check the option 'convert each email individually' if you want to process each message of the mbox file as separated files, the web app will zip the documents in a zip file)
+* Click on Download
 * You can open the downloaded file =)
 
