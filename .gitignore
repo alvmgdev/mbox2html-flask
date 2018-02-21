@@ -99,3 +99,9 @@ ENV/
 
 # mypy
 .mypy_cache/
+
+# Idea folder
+.idea/
+
+# Flask Sessions (file system)
+flask_session/
