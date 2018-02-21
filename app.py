@@ -1,8 +1,11 @@
-import os, mailbox
+import os
+import mailbox
+import uuid
 import zipfile
 from flask import Flask, after_this_request, session, url_for, render_template, request, redirect, flash, send_from_directory
 from flask_bootstrap import Bootstrap
 from werkzeug.utils import secure_filename
+from flask_session import Session
 
 UPLOAD_FOLDER = './uploads'
 DOWNLOAD_FOLDER = './downloads'
@@ -14,7 +17,9 @@ OUTPUT_TEMPLATE_SINGLE_FILE = 'output_template_single.html'
 app = Flask(__name__, static_url_path='')
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['SECRET_KEY'] = 'Your_secret_string'
+app.config['SESSION_TYPE'] = 'filesystem'
 Bootstrap(app)
+Session(app)
 
 
 def allowed_file(filename):
@@ -62,8 +67,9 @@ def upload():
         if not os.path.exists(UPLOAD_FOLDER):
             os.makedirs(UPLOAD_FOLDER)
 
-        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-        session['uploaded_file_info'] = dict(filename=filename)
+        unique_filename = uuid.uuid4().hex
+        file.save(os.path.join(app.config['UPLOAD_FOLDER'], unique_filename))
+        session['uploaded_file_info'] = dict(filename=filename, unique_filename=unique_filename)
         flash('File {} uploaded successfully'.format(filename), 'success')
         return redirect(url_for('index'))
     else:
@@ -78,40 +84,46 @@ def convert():
             os.makedirs(DOWNLOAD_FOLDER)
 
         filename = session['uploaded_file_info'].get('filename')
-        mbox_file = mailbox.mbox(os.path.join(UPLOAD_FOLDER, filename))
+        unique_filename = session['uploaded_file_info'].get('unique_filename')
+        mbox_file = mailbox.mbox(os.path.join(UPLOAD_FOLDER, unique_filename))
         fname, file_extension = os.path.splitext(filename)
         process_msgs_as_separated_files = request.form.get('process_msgs_as_separated_files')
         generated_filename_to_download = ''
         list_of_files_to_remove = []
         if process_msgs_as_separated_files == 'on' and len(mbox_file) > 1:
             generated_filename_to_download = '{}.zip'.format(fname)
-            zip = zipfile.ZipFile(os.path.join(DOWNLOAD_FOLDER, generated_filename_to_download), 'w', zipfile.ZIP_DEFLATED)
+            generated_filename_to_download_unique = uuid.uuid4().hex
+            zip = zipfile.ZipFile(os.path.join(DOWNLOAD_FOLDER, generated_filename_to_download_unique), 'w', zipfile.ZIP_DEFLATED)
             msg_counter = 0
             for msg in mbox_file:
                 msg_counter = msg_counter + 1
+                unique_name_html_file = uuid.uuid4().hex
                 app.jinja_env \
                     .get_template(OUTPUT_TEMPLATE_SINGLE_FILE) \
-                    .stream(message=msg, title='{} - Message number: {}'.format(fname, msg_counter)) \
-                    .dump(os.path.join(DOWNLOAD_FOLDER, '{}_{}.html'.format(fname,msg_counter)))
+                    .stream(message=msg, title='{} - Message number: {}'.format(fname, '%02d' % (msg_counter,))) \
+                    .dump(os.path.join(DOWNLOAD_FOLDER, unique_name_html_file))
 
-                zip.write(os.path.join(DOWNLOAD_FOLDER, '{}_{}.html'.format(fname,msg_counter)),
-                          arcname='{}_{}.html'.format(fname,msg_counter))
+                zip.write(os.path.join(DOWNLOAD_FOLDER, unique_name_html_file),
+                          arcname='{}_{}.html'.format(fname, '%02d' % (msg_counter,)))
 
-                list_of_files_to_remove.append(os.path.join(DOWNLOAD_FOLDER, '{}_{}.html'.format(fname,msg_counter)))
+                list_of_files_to_remove.append(os.path.join(DOWNLOAD_FOLDER, unique_name_html_file))
 
             zip.close()
         else:
             generated_filename_to_download = '{}.html'.format(fname)
+            generated_filename_to_download_unique = uuid.uuid4().hex
             app.jinja_env \
                 .get_template(OUTPUT_TEMPLATE_FILE) \
                 .stream(mbox=mbox_file, title=fname) \
-                .dump(os.path.join(DOWNLOAD_FOLDER, generated_filename_to_download))
+                .dump(os.path.join(DOWNLOAD_FOLDER, generated_filename_to_download_unique))
 
-        list_of_files_to_remove.append(os.path.join(UPLOAD_FOLDER, filename))
-        list_of_files_to_remove.append(os.path.join(DOWNLOAD_FOLDER, generated_filename_to_download))
-        session['uploaded_file_info'].update(file_to_download=generated_filename_to_download,
-                                             list_of_files_to_remove=list_of_files_to_remove)
-        flash('Generated file: {}'.format(generated_filename_to_download), 'success')
+        list_of_files_to_remove.append(os.path.join(UPLOAD_FOLDER, unique_filename))
+        list_of_files_to_remove.append(os.path.join(DOWNLOAD_FOLDER, generated_filename_to_download_unique))
+        uploaded_file_info = session['uploaded_file_info']
+        uploaded_file_info.update(file_to_download=generated_filename_to_download,
+                                file_to_download_unique=generated_filename_to_download_unique,
+                                list_of_files_to_remove=list_of_files_to_remove)
+        session['uploaded_file_info'] = uploaded_file_info
         return redirect(url_for('results'))
     else:
         flash('You need to upload a mbox file before convert it', 'error')
@@ -121,7 +133,8 @@ def convert():
 @app.route('/download', methods=['GET'])
 def download():
     if 'uploaded_file_info' in session:
-        filename = session['uploaded_file_info'].get('file_to_download')
+        filename_to_download = session['uploaded_file_info'].get('file_to_download')
+        filename_to_download_unique = session['uploaded_file_info'].get('file_to_download_unique')
         @after_this_request
         def remove_files(response):
             list_of_files_to_remove = session['uploaded_file_info'].get('list_of_files_to_remove')
@@ -130,11 +143,14 @@ def download():
                 for file_path_to_remove in list_of_files_to_remove:
                     os.remove(file_path_to_remove)
             except Exception as error:
-                app.logger.error("Error removing file {} from the system".format(file_path_to_remove),
+                app.logger.error('Error removing file {} from the system'.format(file_path_to_remove),
                                  error)
             return response
 
-        return send_from_directory(DOWNLOAD_FOLDER, filename, as_attachment=True)
+        return send_from_directory(DOWNLOAD_FOLDER,
+                                   filename_to_download_unique,
+                                   attachment_filename=filename_to_download,
+                                   as_attachment=True)
     else:
         return redirect(url_for('index'))
 
